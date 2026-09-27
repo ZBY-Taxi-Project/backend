@@ -1,0 +1,28 @@
+services:
+  database:
+    image: postgres:16-alpine
+    container_name: zby-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-zby_db}
+      POSTGRES_USER: ${DB_USERNAME:-zby_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-your_secure_password}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - zby_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-zby_user} -d ${DB_DATABASE:-zby_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - zby-network
+
+volumes:
+  zby_pgdata:
+    driver: local
+
+networks:
+  zby-network:
+    driver: bridge
