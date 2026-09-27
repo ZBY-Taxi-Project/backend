@@ -34,7 +34,6 @@ class OrderController extends Controller
         $order = Order::with(['assignments' => fn ($q) => $q->where('driver_id', $driver->id)->latest()])
             ->where('current_driver_id', $driver->id)
             ->whereIn('status', [
-                OrderStatus::ASSIGNED,
                 OrderStatus::DRIVER_ACCEPTED,
                 OrderStatus::PICKED_UP,
                 OrderStatus::IN_TRANSIT,

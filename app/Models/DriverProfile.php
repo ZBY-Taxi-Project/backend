@@ -17,6 +17,9 @@ class DriverProfile extends Model
         'vehicle_type',
         'license_plate',
         'status',
+        'total_distance_km',
+        'balance',
+        'rating',
         'current_lat',
         'current_lng',
         'last_active_at',
@@ -26,6 +29,9 @@ class DriverProfile extends Model
     {
         return [
             'status' => DriverStatus::class,
+            'total_distance_km' => 'float',
+            'balance' => 'float',
+            'rating' => 'float',
             'current_lat' => 'float',
             'current_lng' => 'float',
             'last_active_at' => 'datetime',
@@ -45,6 +51,11 @@ class DriverProfile extends Model
     public function orders(): HasMany
     {
         return $this->hasMany(Order::class, 'current_driver_id');
+    }
+
+    public function walletTransactions(): HasMany
+    {
+        return $this->hasMany(DriverWalletTransaction::class, 'driver_id')->orderBy('created_at', 'desc');
     }
 
     public function isAvailable(): bool

@@ -1,0 +1,1001 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "ZBY Taxi Dispatch & Driver API",
+    "description": "Rasmiy ZBY Taxi Backend REST API hujjati. Flutter mobil ilovasi (Haydovchi va Mijoz) hamda Dispetcherlik veb-paneli uchun to'liq API spetsifikatsiyasi.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "ZBY Taxi Engineering Team"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000/api",
+      "description": "Mahalliy ishlab chiqish serveri (Local Dev)"
+    },
+    {
+      "url": "http://10.0.2.2:8000/api",
+      "description": "Android Emulator orqali localhostga ulanish"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "Sanctum Token",
+        "description": "Tizimga kirishda olingan Sanctum tokeni. Format: 'Bearer <token>'"
+      }
+    },
+    "schemas": {
+      "LoginRequest": {
+        "type": "object",
+        "required": ["login", "password"],
+        "properties": {
+          "login": {
+            "type": "string",
+            "example": "+998976140201",
+            "description": "Haydovchi telefon raqami, username yoki email"
+          },
+          "password": {
+            "type": "string",
+            "example": "driver123",
+            "description": "Hisob paroli"
+          }
+        }
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "message": { "type": "string", "example": "Login successful" },
+          "token": { "type": "string", "example": "1|nSgW0qUfQe4c..." },
+          "user": { "$ref": "#/components/schemas/User" }
+        }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 4 },
+          "name": { "type": "string", "example": "Husniyor Azimboyev" },
+          "phone": { "type": "string", "example": "+998976140201" },
+          "role": { "type": "string", "enum": ["admin", "dispatcher", "driver"], "example": "driver" },
+          "driver_profile": { "$ref": "#/components/schemas/DriverProfile" }
+        }
+      },
+      "DriverProfile": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "user_id": { "type": "integer", "example": 4 },
+          "vehicle_type": { "type": "string", "example": "Nexia 3" },
+          "license_plate": { "type": "string", "example": "01A111AA" },
+          "status": { "type": "string", "enum": ["available", "busy", "offline"], "example": "available" },
+          "current_lat": { "type": "number", "format": "float", "example": 41.311087 },
+          "current_lng": { "type": "number", "format": "float", "example": 69.240562 },
+          "total_distance_km": { "type": "number", "example": 14.5 }
+        }
+      },
+      "Order": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 41 },
+          "order_number": { "type": "string", "example": "Buyurtma 9" },
+          "customer_name": { "type": "string", "example": "Jasur Karimov" },
+          "customer_phone": { "type": "string", "example": "+998901234567" },
+          "pickup_address": { "type": "string", "example": "Amir Temur xiyoboni 12" },
+          "pickup_lat": { "type": "number", "format": "float", "example": 41.3111 },
+          "pickup_lng": { "type": "number", "format": "float", "example": 69.2405 },
+          "delivery_address": { "type": "string", "example": "Chilonzor metro 5-mavze" },
+          "delivery_lat": { "type": "number", "format": "float", "example": 41.335 },
+          "delivery_lng": { "type": "number", "format": "float", "example": 69.28 },
+          "total_amount": { "type": "string", "example": "18000.00" },
+          "rate_per_km": { "type": "string", "example": "2000.00" },
+          "estimated_distance_km": { "type": "number", "example": 5.4 },
+          "actual_distance_km": { "type": "number", "example": 2.1 },
+          "status": {
+            "type": "string",
+            "enum": ["new", "pending_dispatch", "assigned", "driver_accepted", "picked_up", "in_transit", "delivered", "cancelled"],
+            "example": "assigned"
+          },
+          "current_driver_id": { "type": "integer", "nullable": true, "example": 1 }
+        }
+      },
+      "OrderAssignment": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 40 },
+          "order_id": { "type": "integer", "example": 41 },
+          "driver_id": { "type": "integer", "example": 1 },
+          "status": { "type": "string", "enum": ["pending", "accepted", "rejected", "cancelled"], "example": "pending" },
+          "assigned_at": { "type": "string", "format": "date-time", "example": "2026-09-27T07:48:11Z" },
+          "order": { "$ref": "#/components/schemas/Order" }
+        }
+      },
+      "LocationUpdateRequest": {
+        "type": "object",
+        "required": ["latitude", "longitude"],
+        "properties": {
+          "latitude": { "type": "number", "format": "float", "example": 41.311087 },
+          "longitude": { "type": "number", "format": "float", "example": 69.240562 },
+          "heading": { "type": "number", "nullable": true, "example": 180.5 },
+          "speed": { "type": "number", "nullable": true, "example": 45.2 }
+        }
+      },
+      "StatusUpdateRequest": {
+        "type": "object",
+        "required": ["status"],
+        "properties": {
+          "status": { "type": "string", "enum": ["available", "busy", "offline"], "example": "available" }
+        }
+      },
+      "OrderStatusUpdateRequest": {
+        "type": "object",
+        "required": ["status"],
+        "properties": {
+          "status": { "type": "string", "enum": ["picked_up", "in_transit", "delivered"], "example": "picked_up" },
+          "remarks": { "type": "string", "nullable": true, "example": "Yo'lovchi mashinaga mindi" }
+        }
+      },
+      "WalletOverview": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": true },
+          "driver": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "integer", "example": 3 },
+              "name": { "type": "string", "example": "Malik Al-Farouq" },
+              "phone": { "type": "string", "example": "+998907770003" },
+              "vehicle_type": { "type": "string", "example": "moto" },
+              "license_plate": { "type": "string", "example": "N/A" },
+              "rating": { "type": "number", "example": 4.9 },
+              "status": { "type": "string", "example": "available" }
+            }
+          },
+          "wallet": {
+            "type": "object",
+            "properties": {
+              "balance": { "type": "number", "example": 214570.0 },
+              "balance_formatted": { "type": "string", "example": "214 570 so'm" },
+              "status_badge": { "type": "string", "example": "Yetarli mablag'" },
+              "status_badge_type": { "type": "string", "example": "success" },
+              "commission_rate_percent": { "type": "integer", "example": 10 },
+              "commission_rate_formatted": { "type": "string", "example": "10%" },
+              "info_message": { "type": "string", "example": "Har bir buyurtma uchun 10% xizmat haqi ushbu hamyondan yechiladi." },
+              "server_badge": { "type": "string", "example": "Backend / Server" }
+            }
+          },
+          "statistics": {
+            "type": "object",
+            "properties": {
+              "total_revenue": { "type": "number", "example": 254300.0 },
+              "total_revenue_formatted": { "type": "string", "example": "254 300 so'm" },
+              "total_commission": { "type": "number", "example": 25430.0 },
+              "total_commission_formatted": { "type": "string", "example": "-25 430 so'm" },
+              "net_earnings": { "type": "number", "example": 228870.0 },
+              "net_earnings_formatted": { "type": "string", "example": "228 870 so'm" }
+            }
+          },
+          "weekly_chart": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "day": { "type": "string", "example": "Du" },
+                "day_name": { "type": "string", "example": "Dushanba" },
+                "gross_amount": { "type": "number", "example": 35000.0 },
+                "commission_amount": { "type": "number", "example": 3500.0 },
+                "net_amount": { "type": "number", "example": 31500.0 },
+                "formatted_net": { "type": "string", "example": "31 500 so'm" },
+                "height_percent": { "type": "integer", "example": 65 }
+              }
+            }
+          },
+          "transactions": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/WalletTransaction" }
+          },
+          "tariff_settings": {
+            "type": "object",
+            "properties": {
+              "rate_per_km": { "type": "number", "example": 2000 },
+              "rate_per_km_formatted": { "type": "string", "example": "1 km = 2 000 so'm" },
+              "commission_rate": { "type": "integer", "example": 10 },
+              "commission_rate_formatted": { "type": "string", "example": "Komissiya 10%" },
+              "server_settings_label": { "type": "string", "example": "Backend API manzilini tekshirish" },
+              "app_title": { "type": "string", "example": "ZBY Haydovchi Tizimi v1.0.0" }
+            }
+          }
+        }
+      },
+      "WalletTransaction": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "order_id": { "type": "integer", "nullable": true, "example": 38 },
+          "type": { "type": "string", "enum": ["commission", "deposit", "refund", "adjustment"], "example": "commission" },
+          "title": { "type": "string", "example": "Buyurtma #38 xizmat haqi (10%)" },
+          "amount": { "type": "number", "example": -430.0 },
+          "amount_formatted": { "type": "string", "example": "-430 so'm" },
+          "balance_after": { "type": "number", "example": 214570.0 },
+          "balance_after_formatted": { "type": "string", "example": "214 570 so'm" },
+          "is_deduction": { "type": "boolean", "example": true },
+          "date_formatted": { "type": "string", "example": "27.09 • 16:37" }
+        }
+      },
+      "WalletTopupRequest": {
+        "type": "object",
+        "required": ["amount"],
+        "properties": {
+          "amount": { "type": "number", "example": 100000, "description": "To'ldiriladigan summa (so'm)" },
+          "payment_method": { "type": "string", "enum": ["click", "payme", "card", "cash", "dispatcher"], "example": "click" }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/auth/login": {
+      "post": {
+        "tags": ["1. Autentifikatsiya (Kirish)"],
+        "summary": "Foydalanuvchi yoki Haydovchi kirishi",
+        "description": "Haydovchi telefon raqami yoki login bilan tizimga kiradi va Sanctum Bearer tokenini oladi.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoginRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Muvaffaqiyatli kirildi",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/LoginResponse" }
+              }
+            }
+          },
+          "422": { "description": "Login yoki parol noto'g'ri" }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "tags": ["1. Autentifikatsiya (Kirish)"],
+        "summary": "Joriy foydalanuvchi ma'lumotlarini olish",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Foydalanuvchi va uning profili",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "user": { "$ref": "#/components/schemas/User" } }
+                }
+              }
+            }
+          },
+          "401": { "description": "Token yaroqsiz yoki ko'rsatilmagan" }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "tags": ["1. Autentifikatsiya (Kirish)"],
+        "summary": "Tizimdan chiqish (Tokenni bekor qilish)",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Tizimdan muvaffaqiyatli chiqildi" }
+        }
+      }
+    },
+    "/driver/sync": {
+      "get": {
+        "tags": ["2. Haydovchi (Flutter Ilovasi)"],
+        "summary": "Haydovchi holatini sinxronlash (Jonli Polling)",
+        "description": "Flutter ilovasi har 3-5 soniyada ushbu endpointni chaqiradi. Agar dispetcher buyurtma biriktirgan bo'lsa, 'pending_assignment' maydonida yangi buyurtma qaytadi!",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Haydovchi holati, kutilayotgan taklif va faol buyurtma",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "timestamp": { "type": "string" },
+                    "driver_status": { "type": "string", "example": "available" },
+                    "pending_assignment": { "$ref": "#/components/schemas/OrderAssignment", "nullable": true },
+                    "active_order": { "$ref": "#/components/schemas/Order", "nullable": true }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/driver/assignment/pending": {
+      "get": {
+        "tags": ["2. Haydovchi (Flutter Ilovasi)"],
+        "summary": "Kutilayotgan yangi buyurtma taklifi",
+        "description": "Dispetcher haydovchiga taklif qilgan va hali tasdiqlanmagan buyurtmani olish.",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Kutilayotgan taklif",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "pending_assignment": { "$ref": "#/components/schemas/OrderAssignment", "nullable": true }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/driver/assignments/{id}/accept": {
+      "post": {
+        "tags": ["2. Haydovchi (Flutter Ilovasi)"],
+        "summary": "Buyurtmani qabul qilish (Tasdiqlash)",
+        "description": "Haydovchi mobil ilovada 'Qabul qilish' tugmasini bosganda chaqiriladi. Buyurtma holati 'driver_accepted' ga o'zgaradi, haydovchi 'busy' bo'ladi.",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" }, "description": "Assignment ID" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Buyurtma qabul qilindi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "example": "Assignment accepted" },
+                    "assignment": { "$ref": "#/components/schemas/OrderAssignment" },
+                    "order": { "$ref": "#/components/schemas/Order" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/driver/assignments/{id}/reject": {
+      "post": {
+        "tags": ["2. Haydovchi (Flutter Ilovasi)"],
+        "summary": "Buyurtmani rad etish",
+        "description": "Haydovchi buyurtmani rad etadi. Buyurtma qaytadan dispetcher navbatiga qaytariladi.",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" }, "description": "Assignment ID" }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": { "reason": { "type": "string", "example": "Taksi buzilgan yoki juda uzoqda" } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Buyurtma rad etildi" }
+        }
+      }
+    },
+    "/driver/order/active": {
+      "get": {
+        "tags": ["2. Haydovchi (Flutter Ilovasi)"],
+        "summary": "Hozir bajarilayotgan faol safar",
+        "description": "Haydovchi qabul qilgan va hozirda yo'lda bo'lgan faol buyurtma ma'lumotlari.",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "order": { "$ref": "#/components/schemas/Order", "nullable": true }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/driver/orders/{id}/status": {
+      "post": {
+        "tags": ["2. Haydovchi (Flutter Ilovasi)"],
+        "summary": "Safar holatini oldinga siljitish (Bosqichlar)",
+        "description": "Bosqichlar: 'picked_up' (Yo'lovchi mindi) -> 'in_transit' (Safar davom etmoqda) -> 'delivered' (Safar yakunlandi, pul olindi).",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" }, "description": "Order ID" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/OrderStatusUpdateRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Holat muvaffaqiyatli yangilandi" }
+        }
+      }
+    },
+    "/driver/location": {
+      "post": {
+        "tags": ["2. Haydovchi (Flutter Ilovasi)"],
+        "summary": "Haydovchi jonli GPS koordinatasini yuborish",
+        "description": "Flutter fonda yoki faol holatda mashina koordinatalarini (latitude, longitude) yuborib turadi. Ushbu ma'lumotlar dispetcher xaritasida real-vaqtda ko'rinadi va taksimetr masofasini hisoblaydi.",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LocationUpdateRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Koordinata yangilandi" }
+        }
+      }
+    },
+    "/driver/status": {
+      "post": {
+        "tags": ["2. Haydovchi (Flutter Ilovasi)"],
+        "summary": "Haydovchi holatini o'zgartirish (Onlayn / Bo'sh / Oflayn)",
+        "description": "Flutter ilovasida haydovchi 'Ishni boshlash' yoki 'Oflayn bo'lish' tugmasini bosganda chaqiriladi.",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/StatusUpdateRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Holat yangilandi" }
+        }
+      }
+    },
+    "/driver/history": {
+      "get": {
+        "tags": ["2. Haydovchi (Flutter Ilovasi)"],
+        "summary": "Haydovchining yakunlangan safarlar tarixi",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "orders": { "type": "array", "items": { "$ref": "#/components/schemas/Order" } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/driver/wallet": {
+      "get": {
+        "tags": ["2. Haydovchi (Flutter Ilovasi)"],
+        "summary": "Haydovchi hamyoni, 10% komissiya, haftalik daromad va statistika",
+        "description": "Flutter 'Profil va Hamyon' ekrani uchun barcha ma'lumotlarni (balans, komissiya, haftalik chart, tranzaksiyalar) qaytaradi.",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Hamyon ma'lumotlari muvaffaqiyatli olindi",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/WalletOverview" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/driver/wallet/topup": {
+      "post": {
+        "tags": ["2. Haydovchi (Flutter Ilovasi)"],
+        "summary": "Haydovchi hamyonini to'ldirish (Click, Payme, Karta, Dispetcher)",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/WalletTopupRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Hamyon muvaffaqiyatli to'ldirildi"
+          }
+        }
+      }
+    },
+    "/driver/wallet/transactions": {
+      "get": {
+        "tags": ["2. Haydovchi (Flutter Ilovasi)"],
+        "summary": "Hamyon operatsiyalari tarixi (paginatsiya bilan)",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Operatsiyalar ro'yxati"
+          }
+        }
+      }
+    },
+    "/pricing/estimate": {
+      "post": {
+        "tags": ["3. Narx va Masofa Hisoblash"],
+        "summary": "Koordinatalar bo'yicha masofa va narxni hisoblash",
+        "description": "Ikki nuqta (chiqish va borish) orasidagi km masofani va so'm narxini hisoblaydi (1 km = 2 000 so'm).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["pickup_lat", "pickup_lng", "delivery_lat", "delivery_lng"],
+                "properties": {
+                  "pickup_lat": { "type": "number", "example": 41.3111 },
+                  "pickup_lng": { "type": "number", "example": 69.2405 },
+                  "delivery_lat": { "type": "number", "example": 41.335 },
+                  "delivery_lng": { "type": "number", "example": 69.28 },
+                  "rate_per_km": { "type": "number", "example": 2000 },
+                  "base_fare": { "type": "number", "example": 3000 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "distance_km": { "type": "number", "example": 4.24 },
+                    "rate_per_km": { "type": "number", "example": 2000 },
+                    "base_fare": { "type": "number", "example": 3000 },
+                    "estimated_price": { "type": "number", "example": 11480 },
+                    "currency": { "type": "string", "example": "UZS" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dispatcher/orders": {
+      "get": {
+        "tags": ["4. Dispetcherlik Portali"],
+        "summary": "Barcha chaqiruv buyurtmalari ro'yxati",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "status", "in": "query", "schema": { "type": "string" }, "description": "Holat bo'yicha filtrlash" },
+          { "name": "search", "in": "query", "schema": { "type": "string" }, "description": "Qidiruv so'zi (Order 1, ism, tel, manzil)" },
+          { "name": "page", "in": "query", "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Buyurtmalar ro'yxati va hisoblagichlar" }
+        }
+      },
+      "post": {
+        "tags": ["4. Dispetcherlik Portali"],
+        "summary": "Yangi chaqiruv buyurtmasini yaratish (Order N)",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["customer_name", "customer_phone", "pickup_address", "delivery_address"],
+                "properties": {
+                  "customer_name": { "type": "string", "example": "Bekzod Aliyev" },
+                  "customer_phone": { "type": "string", "example": "+998901234567" },
+                  "pickup_address": { "type": "string", "example": "Chilonzor metro" },
+                  "delivery_address": { "type": "string", "example": "Toshkent vokzali" },
+                  "total_amount": { "type": "number", "example": 20000 },
+                  "notes": { "type": "string", "example": "Tezroq kelishi so'raldi" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Buyurtma yaratildi (masalan: Buyurtma 10)" }
+        }
+      }
+    },
+    "/dispatcher/orders/{id}": {
+      "get": {
+        "tags": ["4. Dispetcherlik Portali"],
+        "summary": "Buyurtmaning barcha tafsilotlarini olish",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" }, "description": "Order ID" }
+        ],
+        "responses": {
+          "200": { "description": "Buyurtma to'liq ma'lumotlari" }
+        }
+      },
+      "put": {
+        "tags": ["4. Dispetcherlik Portali"],
+        "summary": "Mijoz va buyurtma ma'lumotlarini tahrirlash (biriktirilgan holatda ham)",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" }, "description": "Order ID" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "customer_name": { "type": "string", "example": "Alisher Navoiy" },
+                  "customer_phone": { "type": "string", "example": "+998901239999" },
+                  "pickup_address": { "type": "string", "example": "Amir Temur shox ko'chasi 42, Toshkent" },
+                  "delivery_address": { "type": "string", "example": "Chilonzor 9-mavze, Toshkent" },
+                  "total_amount": { "type": "number", "example": 25000 },
+                  "notes": { "type": "string", "example": "3-podyezd oldida kutadi" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Mijoz ma'lumotlari muvaffaqiyatli yangilandi" }
+        }
+      }
+    },
+    "/dispatcher/orders/{id}/assign": {
+      "post": {
+        "tags": ["4. Dispetcherlik Portali"],
+        "summary": "Buyurtmani haydovchiga biriktirish (Taksini yuborish)",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" }, "description": "Order ID" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["driver_id"],
+                "properties": {
+                  "driver_id": { "type": "integer", "example": 1, "description": "Haydovchi profil ID raqami" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Haydovchiga taklif muvaffaqiyatli yuborildi" }
+        }
+      }
+    },
+    "/dispatcher/orders/{id}/cancel-assignment": {
+      "post": {
+        "tags": ["4. Dispetcherlik Portali"],
+        "summary": "Biriktirishni bekor qilish",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Biriktirish bekor qilindi, buyurtma kutilmoqda holatiga qaytdi" }
+        }
+      }
+    },
+    "/dispatcher/drivers": {
+      "get": {
+        "tags": ["4. Dispetcherlik Portali"],
+        "summary": "Tizimdagi barcha taksi haydovchilari",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Haydovchilar ro'yxati, GPS koordinatalari va holatlari" }
+        }
+      },
+      "post": {
+        "tags": ["4. Dispetcherlik Portali"],
+        "summary": "Yangi taksi haydovchisini ro'yxatdan o'tkazish",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "phone", "password", "vehicle_type", "license_plate"],
+                "properties": {
+                  "name": { "type": "string", "example": "Olim Sharipov" },
+                  "phone": { "type": "string", "example": "+998935554433" },
+                  "password": { "type": "string", "example": "pass1234" },
+                  "vehicle_type": { "type": "string", "example": "Cobalt" },
+                  "license_plate": { "type": "string", "example": "01B777BA" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Haydovchi yaratildi" }
+        }
+      }
+    },
+    "/dispatcher/drivers/{id}": {
+      "put": {
+        "tags": ["4. Dispetcherlik Portali"],
+        "summary": "Haydovchi ma'lumotlarini tahrirlash",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string", "example": "Olim Sharipov" },
+                  "phone": { "type": "string", "example": "+998935554433" },
+                  "vehicle_type": { "type": "string", "example": "Cobalt Yangi" },
+                  "license_plate": { "type": "string", "example": "01B777BA" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Haydovchi ma'lumotlari muvaffaqiyatli yangilandi" }
+        }
+      }
+    },
+    "/dispatcher/drivers/available": {
+      "get": {
+        "tags": ["4. Dispetcherlik Portali"],
+        "summary": "Hozirda bo'sh (Onlayn) taksilar",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Biriktirish uchun tayyor bo'sh haydovchilar" }
+        }
+      }
+    },
+    "/dispatcher/sync": {
+      "get": {
+        "tags": ["4. Dispetcherlik Portali"],
+        "summary": "Dispetcher veb-paneli real-vaqt sinxronlash (Polling)",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Yangi buyurtmalar, hisoblagichlar va haydovchi GPS koordinatalari" }
+        }
+      }
+    },
+    "/driver/wallet/request-topup": {
+      "post": {
+        "tags": ["2. Haydovchi Floti & Balans"],
+        "summary": "To'lov cheki skrinshotini yuklab balans to'ldirish so'rovini yuborish (Flutter)",
+        "description": "Haydovchi admin kartasiga pul o'tkazgach, to'lov cheki rasmini (screenshot) va summani serverga yuboradi.",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["amount", "screenshot"],
+                "properties": {
+                  "amount": { "type": "number", "example": 100000, "description": "O'tkazilgan summa (so'm)" },
+                  "screenshot": { "type": "string", "format": "binary", "description": "To'lov cheki skrinshoti (JPG/PNG)" },
+                  "card_number": { "type": "string", "example": "8600 1234 5678 9012", "description": "To'langan karta raqami" },
+                  "notes": { "type": "string", "example": "Click orqali to'landim", "description": "Qo'shimcha izoh" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "To'lov cheki qabul qilindi va dispetcher tasdiqlashi uchun navbatga qo'yildi" }
+        }
+      }
+    },
+    "/dispatcher/wallet/topup-requests": {
+      "get": {
+        "tags": ["4. Dispetcherlik Portali"],
+        "summary": "To'lov cheki so'rovlari ro'yxati (Ruxsat: wallet.view)",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["pending", "approved", "rejected"] } }
+        ],
+        "responses": {
+          "200": { "description": "Cheklar ro'yxati, hisoblagichlar va ruxsat indikatorlari" }
+        }
+      }
+    },
+    "/dispatcher/wallet/topup-requests/{id}/approve": {
+      "post": {
+        "tags": ["4. Dispetcherlik Portali"],
+        "summary": "To'lov chekini tasdiqlab pul yetkazish (Ruxsat: wallet.approve)",
+        "description": "So'rovni 'approved' qiladi va haydovchi balansiga so'ralgan summani darhol qo'shadi.",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Pul haydovchi balansiga yetkazildi" }
+        }
+      }
+    },
+    "/dispatcher/wallet/topup-requests/{id}/reject": {
+      "post": {
+        "tags": ["4. Dispetcherlik Portali"],
+        "summary": "To'lov chekini rad etish (Ruxsat: wallet.reject)",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": { "type": "string", "example": "Mablag' hisobga kelib tushmadi" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "So'rov rad etildi" }
+        }
+      }
+    },
+    "/dispatcher/wallet/direct-delivery": {
+      "post": {
+        "tags": ["4. Dispetcherlik Portali"],
+        "summary": "Dispetcher tomonidan to'g'ridan-to'g'ri pul yetkazish (Ruxsat: wallet.topup)",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["driver_id", "amount"],
+                "properties": {
+                  "driver_id": { "type": "integer", "example": 10 },
+                  "amount": { "type": "number", "example": 50000 },
+                  "card_number": { "type": "string", "example": "8600 1234 5678 9012" },
+                  "notes": { "type": "string", "example": "Admin kartasiga to'lov yetkazildi" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Mablag' muvaffaqiyatli yetkazildi" }
+        }
+      }
+    },
+    "/dispatcher/permissions": {
+      "get": {
+        "tags": ["4. Dispetcherlik Portali"],
+        "summary": "Ruxsatlar Matritsasi: Modullar, Amallar va Foydalanuvchilar (Admin)",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Modullar, amallar, ruxsatlar va dispetcherlar ro'yxati" }
+        }
+      }
+    },
+    "/dispatcher/users/{id}/permissions": {
+      "post": {
+        "tags": ["4. Dispetcherlik Portali"],
+        "summary": "Foydalanuvchiga ruxsatlarni biriktirish/yangilash (Faqat Admin)",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["permissions"],
+                "properties": {
+                  "permissions": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "example": ["orders.view", "orders.create", "wallet.view", "wallet.topup"]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Foydalanuvchi ruxsatlari muvaffaqiyatli saqlandi" }
+        }
+      }
+    },
+    "/telegram/bot-info": {
+      "get": {
+        "tags": ["5. Telegram Bot Integratsiyasi"],
+        "summary": "Telegram Bot statusi va konfiguratsiyasi",
+        "responses": {
+          "200": { "description": "Bot holati, username, admin karta raqami va webhook manzili" }
+        }
+      }
+    },
+    "/telegram/webhook": {
+      "post": {
+        "tags": ["5. Telegram Bot Integratsiyasi"],
+        "summary": "Telegram Bot Webhook Update Handler",
+        "description": "Telegram Bot serveridan keladigan barcha xabarlar, skrinshot rasmlari va /start komandalarini qayta ishlovchi endpoint.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "type": "object" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Update qabul qilindi" }
+        }
+      }
+    },
+    "/telegram/simulate-incoming-check": {
+      "post": {
+        "tags": ["5. Telegram Bot Integratsiyasi"],
+        "summary": "Telegram orqali yangi to'lov cheki kelishini sinash (Simulyatsiya)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "driver_id": { "type": "integer", "example": 1 },
+                  "amount": { "type": "number", "example": 100000 },
+                  "caption": { "type": "string", "example": "Payme orqali 100 000 so'm to'lov cheki" },
+                  "telegram_username": { "type": "string", "example": "haydovchi_bot" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Telegram to'lov cheki so'rovi muvaffaqiyatli yaratildi" }
+        }
+      }
+    }
+  }
+}

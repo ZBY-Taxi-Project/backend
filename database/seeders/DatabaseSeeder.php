@@ -26,6 +26,7 @@ class DatabaseSeeder extends Seeder
             ['email' => 'admin@zby.test'],
             [
                 'name' => 'System Admin',
+                'username' => 'admin',
                 'password' => Hash::make('password'),
                 'role' => UserRole::ADMIN,
                 'phone' => '+998901234567',
@@ -37,6 +38,7 @@ class DatabaseSeeder extends Seeder
             ['email' => 'dispatcher@zby.test'],
             [
                 'name' => 'Sarah Connor (Lead Dispatcher)',
+                'username' => 'dispatcher',
                 'password' => Hash::make('password'),
                 'role' => UserRole::DISPATCHER,
                 'phone' => '+998901112233',
@@ -47,6 +49,7 @@ class DatabaseSeeder extends Seeder
             ['email' => 'dispatcher2@zby.test'],
             [
                 'name' => 'John Miller (Dispatcher)',
+                'username' => 'dispatcher2',
                 'password' => Hash::make('password'),
                 'role' => UserRole::DISPATCHER,
                 'phone' => '+998904445566',
@@ -58,6 +61,7 @@ class DatabaseSeeder extends Seeder
             ['email' => 'driver1@zby.test'],
             [
                 'name' => 'Alex Turner',
+                'username' => 'driver1',
                 'password' => Hash::make('password'),
                 'role' => UserRole::DRIVER,
                 'phone' => '+998907770001',
@@ -79,6 +83,7 @@ class DatabaseSeeder extends Seeder
             ['email' => 'driver2@zby.test'],
             [
                 'name' => 'David Vance',
+                'username' => 'driver2',
                 'password' => Hash::make('password'),
                 'role' => UserRole::DRIVER,
                 'phone' => '+998907770002',
@@ -100,6 +105,7 @@ class DatabaseSeeder extends Seeder
             ['email' => 'driver3@zby.test'],
             [
                 'name' => 'Malik Al-Farouq',
+                'username' => 'driver3',
                 'password' => Hash::make('password'),
                 'role' => UserRole::DRIVER,
                 'phone' => '+998907770003',
@@ -108,8 +114,10 @@ class DatabaseSeeder extends Seeder
         $profile3 = DriverProfile::updateOrCreate(
             ['user_id' => $driverUser3->id],
             [
-                'vehicle_type' => 'Honda Delivery Moto',
-                'license_plate' => '01 M 456 CC',
+                'vehicle_type' => 'moto',
+                'license_plate' => 'N/A',
+                'balance' => 214570.00,
+                'rating' => 4.9,
                 'status' => DriverStatus::BUSY,
                 'current_lat' => 41.3250,
                 'current_lng' => 69.2285,
@@ -121,6 +129,7 @@ class DatabaseSeeder extends Seeder
             ['email' => 'driver4@zby.test'],
             [
                 'name' => 'Elena Rostova',
+                'username' => 'driver4',
                 'password' => Hash::make('password'),
                 'role' => UserRole::DRIVER,
                 'phone' => '+998907770004',
@@ -245,6 +254,137 @@ class DatabaseSeeder extends Seeder
                 'from_status' => OrderStatus::PICKED_UP,
                 'changed_by_user_id' => $driverUser3->id,
                 'remarks' => 'Package picked up, driving to destination.',
+            ]
+        );
+
+        // Seed wallet transactions for Malik Al-Farouq matching UI screens
+        \App\Models\DriverWalletTransaction::firstOrCreate(
+            ['driver_id' => $profile3->id, 'description' => "Buyurtma #38 xizmat haqi (10%)"],
+            [
+                'order_id' => $order104->id,
+                'type' => 'commission',
+                'amount' => -430.00,
+                'balance_after' => 214570.00,
+                'payment_method' => 'system',
+                'created_at' => now()->subMinutes(15),
+            ]
+        );
+
+        \App\Models\DriverWalletTransaction::firstOrCreate(
+            ['driver_id' => $profile3->id, 'description' => "Qo'lda to'ldirildi (Click)"],
+            [
+                'order_id' => null,
+                'type' => 'deposit',
+                'amount' => 100000.00,
+                'balance_after' => 215000.00,
+                'payment_method' => 'click',
+                'created_at' => now()->subMinutes(21),
+            ]
+        );
+
+        \App\Models\DriverWalletTransaction::firstOrCreate(
+            ['driver_id' => $profile3->id, 'description' => "Buyurtma #34 xizmat haqi (10%)"],
+            [
+                'order_id' => null,
+                'type' => 'commission',
+                'amount' => -2500.00,
+                'balance_after' => 115000.00,
+                'payment_method' => 'system',
+                'created_at' => now()->subHours(6),
+            ]
+        );
+
+        // 4. Seed Modules, Actions, and Permissions System
+        $modWallet = \App\Models\Module::updateOrCreate(['name' => 'wallet'], ['display_name' => 'Hamyon va Moliya', 'description' => 'Haydovchilar balansi va to\'lovlar']);
+        $modOrders = \App\Models\Module::updateOrCreate(['name' => 'orders'], ['display_name' => 'Buyurtmalar', 'description' => 'Taksi buyurtmalari boshqaruvi']);
+        $modDrivers = \App\Models\Module::updateOrCreate(['name' => 'drivers'], ['display_name' => 'Haydovchilar', 'description' => 'Haydovchilar ro\'yxati va holati']);
+        $modMap = \App\Models\Module::updateOrCreate(['name' => 'map'], ['display_name' => 'Jonli Xarita', 'description' => 'GPS telemetriya va mashinalar']);
+        $modSettings = \App\Models\Module::updateOrCreate(['name' => 'settings'], ['display_name' => 'Sozlamalar', 'description' => 'Tizim sozlamalari']);
+
+        $actView = \App\Models\Action::updateOrCreate(['name' => 'view'], ['display_name' => 'Ko\'rish']);
+        $actCreate = \App\Models\Action::updateOrCreate(['name' => 'create'], ['display_name' => 'Yaratish']);
+        $actEdit = \App\Models\Action::updateOrCreate(['name' => 'edit'], ['display_name' => 'Tahrirlash']);
+        $actDelete = \App\Models\Action::updateOrCreate(['name' => 'delete'], ['display_name' => 'O\'chirish']);
+        $actTopup = \App\Models\Action::updateOrCreate(['name' => 'topup'], ['display_name' => 'Balans to\'ldirish']);
+        $actApprove = \App\Models\Action::updateOrCreate(['name' => 'approve'], ['display_name' => 'Tasdiqlash']);
+        $actReject = \App\Models\Action::updateOrCreate(['name' => 'reject'], ['display_name' => 'Rad etish']);
+
+        // Permissions
+        $pWalletView = \App\Models\Permission::updateOrCreate(
+            ['code' => 'wallet.view'],
+            ['module_id' => $modWallet->id, 'action_id' => $actView->id, 'display_name' => 'Hamyonni ko\'rish']
+        );
+        $pWalletTopup = \App\Models\Permission::updateOrCreate(
+            ['code' => 'wallet.topup'],
+            ['module_id' => $modWallet->id, 'action_id' => $actTopup->id, 'display_name' => 'Haydovchi balansini to\'ldirish (pul yetkazish)']
+        );
+        $pWalletApprove = \App\Models\Permission::updateOrCreate(
+            ['code' => 'wallet.approve'],
+            ['module_id' => $modWallet->id, 'action_id' => $actApprove->id, 'display_name' => 'Karta to\'lovi chekini tasdiqlash']
+        );
+        $pWalletReject = \App\Models\Permission::updateOrCreate(
+            ['code' => 'wallet.reject'],
+            ['module_id' => $modWallet->id, 'action_id' => $actReject->id, 'display_name' => 'To\'lov chekini rad etish']
+        );
+        $pOrdersView = \App\Models\Permission::updateOrCreate(
+            ['code' => 'orders.view'],
+            ['module_id' => $modOrders->id, 'action_id' => $actView->id, 'display_name' => 'Buyurtmalarni ko\'rish']
+        );
+        $pOrdersCreate = \App\Models\Permission::updateOrCreate(
+            ['code' => 'orders.create'],
+            ['module_id' => $modOrders->id, 'action_id' => $actCreate->id, 'display_name' => 'Buyurtma yaratish']
+        );
+        $pOrdersEdit = \App\Models\Permission::updateOrCreate(
+            ['code' => 'orders.edit'],
+            ['module_id' => $modOrders->id, 'action_id' => $actEdit->id, 'display_name' => 'Buyurtmani tahrirlash']
+        );
+        $pDriversView = \App\Models\Permission::updateOrCreate(
+            ['code' => 'drivers.view'],
+            ['module_id' => $modDrivers->id, 'action_id' => $actView->id, 'display_name' => 'Haydovchilarni ko\'rish']
+        );
+        $pDriversEdit = \App\Models\Permission::updateOrCreate(
+            ['code' => 'drivers.edit'],
+            ['module_id' => $modDrivers->id, 'action_id' => $actEdit->id, 'display_name' => 'Haydovchilarni tahrirlash']
+        );
+        $pMapView = \App\Models\Permission::updateOrCreate(
+            ['code' => 'map.view'],
+            ['module_id' => $modMap->id, 'action_id' => $actView->id, 'display_name' => 'Xaritani ko\'rish']
+        );
+        $pSettingsView = \App\Models\Permission::updateOrCreate(
+            ['code' => 'settings.view'],
+            ['module_id' => $modSettings->id, 'action_id' => $actView->id, 'display_name' => 'Sozlamalarni ko\'rish']
+        );
+
+        // Assign permissions to dispatcher1 (Lead Dispatcher with financial authority)
+        $dispatcher1->permissions()->sync([
+            $pWalletView->id,
+            $pWalletTopup->id,
+            $pWalletApprove->id,
+            $pWalletReject->id,
+            $pOrdersView->id,
+            $pOrdersCreate->id,
+            $pOrdersEdit->id,
+            $pDriversView->id,
+            $pDriversEdit->id,
+            $pMapView->id,
+        ]);
+
+        // Assign limited permissions to dispatcher2 (Standard Dispatcher WITHOUT wallet rights)
+        $dispatcher2->permissions()->sync([
+            $pOrdersView->id,
+            $pOrdersCreate->id,
+            $pDriversView->id,
+            $pMapView->id,
+        ]);
+
+        // Seed sample WalletTopupRequest
+        \App\Models\WalletTopupRequest::updateOrCreate(
+            ['driver_id' => $profile3->id, 'amount' => 100000.00, 'status' => 'pending'],
+            [
+                'user_id' => $driverUser3->id,
+                'card_number' => '8600 31** **** 4492',
+                'screenshot_path' => '/storage/topup_receipts/sample_receipt.png',
+                'notes' => 'Karta orqali 100 000 so\'m admin kartasiga o\'tkazildi. Iltimos tasdiqlang.',
             ]
         );
     }

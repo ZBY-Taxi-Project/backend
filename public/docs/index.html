@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <title>ZBY Taxi API — Swagger Hujjatlari</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #0a0d14;
+      color: #f1f5f9;
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    }
+    .top-header {
+      background: #111726;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand-logo {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+    }
+    .brand-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #fff;
+    }
+    .brand-desc {
+      font-size: 0.75rem;
+      color: #94a3b8;
+    }
+    .btn-json-spec {
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.35);
+      color: #a5b4fc;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .btn-json-spec:hover {
+      background: rgba(99, 102, 241, 0.25);
+      color: #fff;
+    }
+
+    /* Swagger Dark Theme Tweaks */
+    .swagger-ui {
+      filter: invert(88%) hue-rotate(180deg);
+    }
+    .swagger-ui .topbar { display: none; }
+    .swagger-ui .info { margin: 24px 0; }
+    .swagger-ui .scheme-container {
+      background: transparent;
+      box-shadow: none;
+      padding: 10px 0;
+    }
+  </style>
+</head>
+<body>
+  <header class="top-header">
+    <div class="brand">
+      <div class="brand-logo">🚖</div>
+      <div>
+        <div class="brand-title">ZBY Taxi — Backend API Swagger Hujjati</div>
+        <div class="brand-desc">Flutter Mobile (Haydovchi) va Dispetcherlik Portali Integratsiyasi</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <a href="/docs/openapi.json" target="_blank" class="btn-json-spec">
+        <span>📄 openapi.json (Yuklab olish)</span>
+      </a>
+      <a href="http://localhost:5173" target="_blank" class="btn-json-spec" style="background:rgba(16,185,129,0.15);border-color:rgba(16,185,129,0.35);color:#34d399;">
+        <span>🖥️ Dispetcher Paneli</span> ↗
+      </a>
+    </div>
+  </header>
+
+  <div id="swagger-ui"></div>
+
+  <script src="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui-bundle.js"></script>
+  <script src="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui-standalone-preset.js"></script>
+  <script>
+    window.onload = function() {
+      window.ui = SwaggerUIBundle({
+        url: "/docs/openapi.json",
+        dom_id: '#swagger-ui',
+        deepLinking: true,
+        presets: [
+          SwaggerUIBundle.presets.apis,
+          SwaggerUIStandalonePreset
+        ],
+        layout: "BaseLayout",
+        defaultModelsExpandDepth: -1,
+        docExpansion: "list",
+        persistAuthorization: true
+      });
+    };
+  </script>
+</body>
+</html>

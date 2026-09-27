@@ -81,7 +81,10 @@ class AssignmentService
                 'remarks' => "Assigned to driver: {$driverRecord->user->name}",
             ]);
 
-            return $assignment->load(['order', 'driver.user', 'dispatcher']);
+            $assignment = $assignment->load(['order', 'driver.user', 'dispatcher']);
+            event(new \App\Events\OrderAssigned($orderRecord, $assignment));
+
+            return $assignment;
         });
     }
 
@@ -199,9 +202,10 @@ class AssignmentService
         ?string $reason = null
     ): OrderAssignment {
         return DB::transaction(function () use ($assignment, $accept, $driver, $reason) {
-            // Lock assignment and order
+            // Lock assignment, order, and driver
             $assignmentRecord = OrderAssignment::where('id', $assignment->id)->lockForUpdate()->firstOrFail();
             $orderRecord = Order::where('id', $assignmentRecord->order_id)->lockForUpdate()->firstOrFail();
+            $driverRecord = DriverProfile::where('id', $driver->id)->lockForUpdate()->firstOrFail();
 
             if ($assignmentRecord->driver_id !== $driver->id) {
                 throw new OrderAssignmentException(
@@ -214,26 +218,89 @@ class AssignmentService
             if ($assignmentRecord->status !== AssignmentStatus::PENDING) {
                 throw new OrderAssignmentException(
                     "Assignment offer has already been {$assignmentRecord->status->value}.",
-                    'ASSIGNMENT_NOT_PENDING'
+                    'ASSIGNMENT_NOT_PENDING',
+                    409
+                );
+            }
+
+            if ($orderRecord->status !== OrderStatus::ASSIGNED) {
+                throw new OrderAssignmentException(
+                    "Cannot respond to assignment: order is currently in status '{$orderRecord->status->value}' and is no longer assigned.",
+                    'ORDER_NOT_IN_ASSIGNED_STATE',
+                    409
                 );
             }
 
             if ($accept) {
+                if ($driverRecord->status === DriverStatus::BUSY) {
+                    throw new OrderAssignmentException(
+                        "Driver is already busy with an active order.",
+                        'DRIVER_ALREADY_BUSY',
+                        409
+                    );
+                }
+
+                if ($driverRecord->balance < 0) {
+                    throw new OrderAssignmentException(
+                        "Hamyonda mablag' yetarli emas. Balansingiz: {$driverRecord->balance} so'm. Iltimos, hisobingizni to'ldiring.",
+                        'INSUFFICIENT_WALLET_BALANCE',
+                        422
+                    );
+                }
+
                 $assignmentRecord->status = AssignmentStatus::ACCEPTED;
                 $assignmentRecord->responded_at = now();
                 $assignmentRecord->save();
 
+                // Calculate 10% commission fee
+                $totalAmount = (float) $orderRecord->total_amount;
+                if ($totalAmount <= 0) {
+                    $dist = (float) ($orderRecord->estimated_distance_km ?: 2.0);
+                    $rate = (float) ($orderRecord->rate_per_km ?: 2000);
+                    $totalAmount = round($dist * $rate, 2);
+                    $orderRecord->total_amount = $totalAmount;
+                }
+
+                $commissionFee = round($totalAmount * 0.10, 2);
+                $orderRecord->commission_rate = 10.0;
+                $orderRecord->commission_amount = $commissionFee;
                 $orderRecord->status = OrderStatus::DRIVER_ACCEPTED;
                 $orderRecord->save();
 
-                $driver->update(['status' => DriverStatus::BUSY]);
+                // Check if commission already charged for this order (idempotency)
+                $alreadyCharged = \App\Models\DriverWalletTransaction::where('order_id', $orderRecord->id)
+                    ->where('type', 'commission')
+                    ->exists();
+
+                if (! $alreadyCharged && $commissionFee > 0) {
+                    $newBalance = round($driverRecord->balance - $commissionFee, 2);
+                    $driverRecord->balance = $newBalance;
+
+                    $displayNumber = preg_replace('/^Buyurtma\s*/i', '#', $orderRecord->order_number);
+                    if (! str_starts_with($displayNumber, '#')) {
+                        $displayNumber = '#'.$displayNumber;
+                    }
+
+                    \App\Models\DriverWalletTransaction::create([
+                        'driver_id' => $driverRecord->id,
+                        'order_id' => $orderRecord->id,
+                        'type' => 'commission',
+                        'amount' => -$commissionFee,
+                        'balance_after' => $newBalance,
+                        'description' => "Buyurtma {$displayNumber} xizmat haqi (10%)",
+                        'payment_method' => 'system',
+                    ]);
+                }
+
+                $driverRecord->status = DriverStatus::BUSY;
+                $driverRecord->save();
 
                 OrderStatusHistory::create([
                     'order_id' => $orderRecord->id,
                     'from_status' => OrderStatus::ASSIGNED,
                     'to_status' => OrderStatus::DRIVER_ACCEPTED,
                     'changed_by_user_id' => $driver->user_id,
-                    'remarks' => "Driver accepted assignment offer.",
+                    'remarks' => "Driver accepted assignment offer. 10% commission fee ({$commissionFee} so'm) charged.",
                 ]);
             } else {
                 $assignmentRecord->status = AssignmentStatus::REJECTED;
@@ -255,7 +322,15 @@ class AssignmentService
                 ]);
             }
 
-            return $assignmentRecord->load(['order', 'driver.user']);
+            $assignmentRecord = $assignmentRecord->load(['order', 'driver.user']);
+
+            if ($accept) {
+                event(new \App\Events\AssignmentAccepted($orderRecord, $assignmentRecord));
+            } else {
+                event(new \App\Events\AssignmentRejected($orderRecord, $assignmentRecord));
+            }
+
+            return $assignmentRecord;
         });
     }
 }
