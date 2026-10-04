@@ -1,28 +1,25 @@
-FROM php:8.2-cli-alpine
+FROM php:8.2-cli-bookworm
 
 # Set working directory
 WORKDIR /var/www/html
 
-# Install system dependencies & PostgreSQL dev libraries
-RUN apk add --no-cache \
-    postgresql-dev \
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq-dev \
     libzip-dev \
-    icu-dev \
-    oniguruma-dev \
+    libicu-dev \
     netcat-openbsd \
-    bash \
     git \
-    unzip
-
-# Install required PHP extensions
-RUN docker-php-ext-install \
-    pdo_pgsql \
-    pgsql \
-    zip \
-    bcmath \
-    pcntl \
-    intl \
-    opcache
+    unzip \
+    && docker-php-ext-install \
+        pdo_pgsql \
+        pgsql \
+        zip \
+        bcmath \
+        pcntl \
+        intl \
+        opcache \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
