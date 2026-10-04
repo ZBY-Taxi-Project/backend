@@ -1,4 +1,4 @@
-FROM php:8.2-cli-bookworm
+FROM php:8.4-cli-bookworm
 
 # Set working directory
 WORKDIR /var/www/html
